@@ -1,6 +1,7 @@
 package com.lyx.process.service;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ZipUtil;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
 import com.baomidou.mybatisplus.generator.InjectionConfig;
@@ -10,6 +11,8 @@ import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
 import com.lyx.common.ResponseData;
 import com.lyx.entity.GenerateCodePara;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -21,7 +24,24 @@ import java.util.UUID;
 public class MyServiceImpl implements MyService
 {
 	@Override
-	public ResponseData geneCode(GenerateCodePara para)
+	public ResponseEntity geneCode(GenerateCodePara para)
+	{
+		File allFile = FileUtil.file(this.geneCodeFile(para));
+
+		File zipFile = ZipUtil.zip(allFile); // 将总目录下的文件打包，不包括总目录
+
+		return ResponseEntity
+				.ok()
+				.header("Content-Disposition", "attachment;fileName=code" + FileUtil.getType(zipFile))
+				.contentType(MediaType.MULTIPART_FORM_DATA) // 设置 Content-Type 头部
+				.body(FileUtil.readBytes(zipFile));
+	}
+
+	/**
+	 * 生成代码
+	 * @param para 生成的文件的总路径，要把这个文件打包下载，然后删除
+	 */
+	private String geneCodeFile(GenerateCodePara para)
 	{
 		AutoGenerator mpg = new AutoGenerator();
 
@@ -62,23 +82,23 @@ public class MyServiceImpl implements MyService
 
 			List<FileOutConfig> focList = new ArrayList<>();
 			focList.add
-			(
-				new FileOutConfig(templatePath)
-				{
-					@Override
-					public String outputFile(TableInfo tableInfo)
-					{
-						if (inPackage)
-						{
-							return projectPath + "/src/main/java/" + pc.getParent().replace(".", "/") + "/mapper/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
-						}
-						else
-						{
-							return projectPath + "/src/main/resources/mapper/" + pc.getModuleName() + "/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
-						}
-					}
-				}
-			);
+					(
+							new FileOutConfig(templatePath)
+							{
+								@Override
+								public String outputFile(TableInfo tableInfo)
+								{
+									if (inPackage)
+									{
+										return projectPath + "/src/main/java/" + pc.getParent().replace(".", "/") + "/mapper/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
+									}
+									else
+									{
+										return projectPath + "/src/main/resources/mapper/" + pc.getModuleName() + "/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
+									}
+								}
+							}
+					);
 
 			cfg.setFileOutConfigList(focList);
 			mpg.setCfg(cfg);
@@ -107,8 +127,6 @@ public class MyServiceImpl implements MyService
 		mpg.setTemplateEngine(new FreemarkerTemplateEngine());
 		mpg.execute();
 
-		File allFile = FileUtil.file(projectPath);
-
-		return ResponseData.successMsg("成功了");
+		return projectPath;
 	}
 }
