@@ -19,8 +19,6 @@ public class MyController
 	@PostMapping("/geneCode")
 	public ResponseData geneCode(GenerateCodePara para)
 	{
-		myService.geneCode(para);
-
-		return null;
+		return myService.geneCode(para);
 	}
 }
