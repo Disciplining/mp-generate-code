@@ -9,7 +9,6 @@ import com.baomidou.mybatisplus.generator.config.*;
 import com.baomidou.mybatisplus.generator.config.po.TableInfo;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
-import com.lyx.common.ResponseData;
 import com.lyx.entity.GenerateCodePara;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,15 +25,20 @@ public class MyServiceImpl implements MyService
 	@Override
 	public ResponseEntity geneCode(GenerateCodePara para)
 	{
-		File allFile = FileUtil.file(this.geneCodeFile(para));
-
+		File allFile = FileUtil.file(this.geneCodeFile(para)); // 总目录
 		File zipFile = ZipUtil.zip(allFile); // 将总目录下的文件打包，不包括总目录
+
+		byte[] zipFileData = FileUtil.readBytes(zipFile);
+
+		// 删除生成的文件
+		FileUtil.del(allFile);
+		FileUtil.del(zipFile);
 
 		return ResponseEntity
 				.ok()
-				.header("Content-Disposition", "attachment;fileName=code" + FileUtil.getType(zipFile))
+				.header("Content-Disposition", "attachment;fileName=code.zip")
 				.contentType(MediaType.MULTIPART_FORM_DATA) // 设置 Content-Type 头部
-				.body(FileUtil.readBytes(zipFile));
+				.body(zipFileData);
 	}
 
 	/**
@@ -82,23 +86,23 @@ public class MyServiceImpl implements MyService
 
 			List<FileOutConfig> focList = new ArrayList<>();
 			focList.add
-					(
-							new FileOutConfig(templatePath)
-							{
-								@Override
-								public String outputFile(TableInfo tableInfo)
-								{
-									if (inPackage)
-									{
-										return projectPath + "/src/main/java/" + pc.getParent().replace(".", "/") + "/mapper/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
-									}
-									else
-									{
-										return projectPath + "/src/main/resources/mapper/" + pc.getModuleName() + "/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
-									}
-								}
-							}
-					);
+			(
+				new FileOutConfig(templatePath)
+				{
+					@Override
+					public String outputFile(TableInfo tableInfo)
+					{
+						if (inPackage)
+						{
+							return projectPath + "/src/main/java/" + pc.getParent().replace(".", "/") + "/mapper/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
+						}
+						else
+						{
+							return projectPath + "/src/main/resources/mapper/" + pc.getModuleName() + "/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
+						}
+					}
+				}
+			);
 
 			cfg.setFileOutConfigList(focList);
 			mpg.setCfg(cfg);
