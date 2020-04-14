@@ -2,12 +2,15 @@ package com.lyx.entity;
 
 import lombok.Data;
 
+import javax.validation.constraints.NotEmpty;
+
 /**
  * 代码生成参数
  */
 @Data
 public class GenerateCodePara
 {
+	@NotEmpty(message = "父包名不能为空")
 	private String parentPackage;
 	private String moduleName;
 	private String dbHost;
