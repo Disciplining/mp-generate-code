@@ -1,6 +1,7 @@
 package com.lyx.process.service;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ZipUtil;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
 import com.baomidou.mybatisplus.generator.InjectionConfig;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 
+import java.io.File;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -26,43 +29,46 @@ public class MyServiceImpl implements MyService
 	@Override
 	public ResponseEntity geneCode(GenerateCodePara para, BindingResult result)
 	{
-		System.out.println(para);
+		try
+		{
+			ResponseData filedCheckResult = this.fieldCheck(result);
+			if (!filedCheckResult.getSuccess())
+			{
+				return ResponseEntity
+						.ok()
+						.contentType(MediaType.APPLICATION_JSON) // 设置 Content-Type 头部
+						.body(" {\"error\":\"" + filedCheckResult.getMsg() + "\"} ");
+			}
 
-		ResponseData filedCheckResult = this.fieldCheck(result);
-		if (!filedCheckResult.getSuccess())
+			File allFile = FileUtil.file(this.geneCodeFile(para)); // 总目录
+			File zipFile = ZipUtil.zip(allFile); // 将总目录下的文件打包，不包括总目录
+
+			byte[] zipFileData = FileUtil.readBytes(zipFile);
+
+			// 删除生成的文件
+			FileUtil.del(allFile);
+			FileUtil.del(zipFile);
+
+			return ResponseEntity
+					.ok()
+					.header("Content-Disposition", "attachment;fileName=code.zip")
+					.contentType(MediaType.MULTIPART_FORM_DATA) // 设置 Content-Type 头部
+					.body(zipFileData);
+		}
+		catch (Exception e)
 		{
 			return ResponseEntity
 					.ok()
 					.contentType(MediaType.APPLICATION_JSON) // 设置 Content-Type 头部
-					.body(" {\"error\":\"" + filedCheckResult.getMsg() + "\"} ");
+					.body(" {\"error\":\"连接数据库失败，请检查主机以用用户名密码是否正确\"} ");
 		}
-
-		return ResponseEntity
-				.ok()
-				.contentType(MediaType.TEXT_PLAIN)
-				.body("ok this");
-
-//		File allFile = FileUtil.file(this.geneCodeFile(para)); // 总目录
-//		File zipFile = ZipUtil.zip(allFile); // 将总目录下的文件打包，不包括总目录
-//
-//		byte[] zipFileData = FileUtil.readBytes(zipFile);
-//
-//		// 删除生成的文件
-//		FileUtil.del(allFile);
-//		FileUtil.del(zipFile);
-//
-//		return ResponseEntity
-//				.ok()
-//				.header("Content-Disposition", "attachment;fileName=code.zip")
-//				.contentType(MediaType.MULTIPART_FORM_DATA) // 设置 Content-Type 头部
-//				.body(zipFileData);
 	}
 
 	/**
 	 * 生成代码
 	 * @param para 生成的文件的总路径，要把这个文件打包下载，然后删除
 	 */
-	private String geneCodeFile(GenerateCodePara para)
+	private String geneCodeFile(GenerateCodePara para) throws ConnectException
 	{
 		AutoGenerator mpg = new AutoGenerator();
 
