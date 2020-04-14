@@ -18,7 +18,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 
 import java.io.File;
-import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -68,7 +67,7 @@ public class MyServiceImpl implements MyService
 	 * 生成代码
 	 * @param para 生成的文件的总路径，要把这个文件打包下载，然后删除
 	 */
-	private String geneCodeFile(GenerateCodePara para) throws ConnectException
+	private String geneCodeFile(GenerateCodePara para)
 	{
 		AutoGenerator mpg = new AutoGenerator();
 
